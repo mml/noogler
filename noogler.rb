@@ -1,61 +1,55 @@
-#!/usr/bin/env python2.6
-from datetime import datetime
-from dateutil.tz import *
+#!/usr/bin/env ruby
+require 'time'
+require 'rubygems'
+require 'active_support'
 
-class UntilCalc(object):
-    """
-    Pretty-prints the difference between the current time and a fixed point in
-    time.
-    """
+# Pretty-prints the difference between the current time and a fixed point in
+# time.
+class UntilCalc
+  def to_s
+    phrases.reject(&:nil?).join ' '
+  end
 
-    def __str__(self):
-        return ' '.join(self.phrases)
+  # The phrases to be assembled in to a string representation.
+  def phrases
+    [context, weeks, days, hm].reject &:nil?
+  end
 
-    @property
-    def phrases(self):
-        """The phrases to be assembled in to a string representation."""
-        return filter(None,
-                      [self.context(), self.weeks(), self.days(), self.hm()])
+  # The 'weeks until/since' phrase.
+  def weeks
+    count = diff / 86400 / 7
+    sprintf '%d weeks', count unless count.zero?
+  end
 
-    def weeks(self):
-        """The 'weeks until/since' phrase."""
-        count = self.diff.days / 7
-        return '%d weeks' % count if count else None
+  # The 'days until/since' phrase.
+  def days
+    count = diff / 86400 % 7
+    sprintf '%d days', count unless count.zero?
+  end
 
-    def days(self):
-        """The 'days until/since' phrase."""
-        count  = self.diff.days % 7
-        return '%d days' % count if count else None
+  # The HH:MM part.
+  def hm
+    sprintf "%02d:%02d", diff % 86400 / 3600, diff % 3600 / 60
+  end
 
-    def hm(self):
-        """The HH:MM part."""
-        return '%02d:%02d' % (self.diff.seconds/3600, self.diff.seconds%3600/60)
+  # The temporal positioning part.
+  def context
+    now < @t0 ? 't minus' : 't ='
+  end
 
-    def context(self):
-        """The temporal positioning part."""
-        return 't minus' if self.now < self.when else 't ='
+  # Cache of the current time.
+  attr_accessor_with_default(:now) { Time.now }
 
-    @property
-    def diff(self):
-        """The absolute difference between now and when."""
-        if not hasattr(self, '_diff'): self._diff = abs(self.when - self.now)
+  # The absolute difference between now and when.
+  attr_accessor_with_default(:diff) { (@t0 - now).abs.floor }
 
-        return self._diff
+  # Constructs a new UntilCalc using the etime +t0+.
+  def initialize(t0)
+    @t0 = t0
+  end
+end
 
-    @property
-    def now(self):
-        """Cache of the current time."""
-        if not hasattr(self, '_now'): self._now = datetime.now(tzlocal())
-
-        return self._now
-
-    def __init__(self, when):
-        """Constructs a new UntilCalc using the datetime when"""
-        super(UntilCalc, self).__init__()
-        self.when = when
-
-
-if __name__ == '__main__':
-    # 2010-06-07 0800 -0700
-    START = datetime(2010, 6, 7, 8, 0, 0, tzinfo=tzstr('PST8PDT'))
-    print UntilCalc(START)
+if __FILE__ == $0
+  START = Time.parse('2010-06-07 08:00 -0700')
+  print UntilCalc.new(START)
+end
